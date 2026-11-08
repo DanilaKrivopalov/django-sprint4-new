@@ -1,1 +1,4 @@
-TOXICITY_THRESHOLD = 0.8
+from blog.constants import TOXICITY_THRESHOLD
+
+
+__all__ = ['TOXICITY_THRESHOLD']

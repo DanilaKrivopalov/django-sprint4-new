@@ -1,12 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 
-from blog import constants
-from blog.models import Post
-from blog.views import get_published_posts
+from blog.services import (
+    annotate_comments,
+    filter_published_posts,
+    paginate_posts,
+)
 
 from .forms import UserEditForm, UserRegistrationForm
 
@@ -34,42 +34,21 @@ def profile(request, username):
         username=username,
     )
 
-    is_owner = (
-        request.user.is_authenticated
-        and request.user == profile
-    )
+    post_list = annotate_comments(
+        profile.posts.all(),
+    ).order_by('-pub_date')
 
-    if is_owner:
-        post_list = Post.objects.filter(
-            author=profile,
-        ).select_related(
-            'author',
-            'category',
-            'location',
-        ).annotate(
-            comment_count=Count('comments'),
-        ).order_by('-pub_date')
-    else:
-        post_list = get_published_posts().filter(
-            author=profile,
-        )
+    if request.user != profile:
+        post_list = filter_published_posts(post_list)
 
-    paginator = Paginator(
-        post_list,
-        constants.POSTS_BY_PAGE,
-    )
-    page_obj = paginator.get_page(
-        request.GET.get('page'),
-    )
+    page_obj = paginate_posts(request, post_list)
 
     return render(
         request,
         'users/profile.html',
         {
             'profile': profile,
-            'post_list': page_obj.object_list,
             'page_obj': page_obj,
-            'is_owner': is_owner,
         },
     )
 

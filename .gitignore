@@ -152,3 +152,4 @@ media/
 
 sent_emails/
 .venv-check/
+static/

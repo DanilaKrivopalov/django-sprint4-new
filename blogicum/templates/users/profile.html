@@ -11,7 +11,7 @@
     <p>Имя: {{ profile.first_name }}</p>
     <p>Фамилия: {{ profile.last_name }}</p>
 
-    {% if is_owner %}
+    {% if user == profile %}
       <p>
         <a href="{% url 'users:edit_profile' %}">
           Редактировать профиль

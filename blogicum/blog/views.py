@@ -1,64 +1,19 @@
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Count
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 
-from . import constants
 from .forms import CommentForm, PostForm
 from .models import Category, Comment, Post
-
-
-def get_published_posts():
-    return Post.objects.filter(
-        pub_date__lte=timezone.now(),
-        is_published=True,
-        category__is_published=True,
-    ).select_related(
-        'author',
-        'category',
-        'location',
-    ).annotate(
-        comment_count=Count('comments'),
-    ).order_by('-pub_date')
-
-
-def get_post_for_user(request, post_id):
-    post = get_object_or_404(
-        Post.objects.select_related(
-            'author',
-            'category',
-            'location',
-        ).annotate(
-            comment_count=Count('comments'),
-        ),
-        pk=post_id,
-    )
-
-    is_published = (
-        post.is_published
-        and post.pub_date <= timezone.now()
-        and post.category is not None
-        and post.category.is_published
-    )
-
-    if not is_published and post.author != request.user:
-        raise Http404
-
-    return post
-
-
-def paginate_posts(request, post_list):
-    paginator = Paginator(
-        post_list,
-        constants.POSTS_BY_PAGE,
-    )
-    return paginator.get_page(request.GET.get('page'))
+from .services import (
+    annotate_comments,
+    filter_published_posts,
+    paginate_posts,
+)
 
 
 def index(request):
-    post_list = get_published_posts()
+    post_list = filter_published_posts(
+        annotate_comments(Post.objects.all()),
+    )
     page_obj = paginate_posts(request, post_list)
 
     return render(
@@ -71,11 +26,22 @@ def index(request):
 
 
 def post_detail(request, post_id):
-    post = get_post_for_user(request, post_id)
+    post = get_object_or_404(
+        annotate_comments(Post.objects.all()),
+        pk=post_id,
+    )
+
+    if post.author != request.user:
+        post = get_object_or_404(
+            filter_published_posts(
+                annotate_comments(Post.objects.all()),
+            ),
+            pk=post_id,
+        )
 
     comments = post.comments.select_related(
         'author',
-    ).order_by('created_at')
+    )
 
     form = CommentForm()
 
@@ -97,8 +63,8 @@ def category_posts(request, category_slug):
         is_published=True,
     )
 
-    post_list = get_published_posts().filter(
-        category=category,
+    post_list = filter_published_posts(
+        annotate_comments(category.posts.all()),
     )
     page_obj = paginate_posts(request, post_list)
 
@@ -193,11 +159,20 @@ def delete_post(request, post_id):
 
 @login_required
 def add_comment(request, post_id):
-    post = get_post_for_user(request, post_id)
-
-    form = CommentForm(
-        request.POST or None,
+    post = get_object_or_404(
+        annotate_comments(Post.objects.all()),
+        pk=post_id,
     )
+
+    if post.author != request.user:
+        post = get_object_or_404(
+            filter_published_posts(
+                annotate_comments(Post.objects.all()),
+            ),
+            pk=post_id,
+        )
+
+    form = CommentForm(request.POST or None)
 
     if form.is_valid():
         comment = form.save(commit=False)
@@ -209,9 +184,7 @@ def add_comment(request, post_id):
             post_id=post.pk,
         )
 
-    comments = post.comments.select_related(
-        'author',
-    ).order_by('created_at')
+    comments = post.comments.select_related('author')
 
     return render(
         request,
@@ -226,13 +199,12 @@ def add_comment(request, post_id):
 
 @login_required
 def edit_comment(request, post_id, comment_id):
-    post = get_post_for_user(request, post_id)
-
     comment = get_object_or_404(
-        Comment,
+        Comment.objects.select_related('post'),
         pk=comment_id,
-        post=post,
+        post_id=post_id,
     )
+    post = comment.post
 
     if comment.author != request.user:
         return redirect(
@@ -264,13 +236,12 @@ def edit_comment(request, post_id, comment_id):
 
 @login_required
 def delete_comment(request, post_id, comment_id):
-    post = get_post_for_user(request, post_id)
-
     comment = get_object_or_404(
-        Comment,
+        Comment.objects.select_related('post'),
         pk=comment_id,
-        post=post,
+        post_id=post_id,
     )
+    post = comment.post
 
     if comment.author != request.user:
         return redirect(

@@ -7,12 +7,7 @@ from . import constants
 User = get_user_model()
 
 
-class IsPublishedCreatedAbstract(models.Model):
-    is_published = models.BooleanField(
-        default=True,
-        verbose_name='Опубликовано',
-        help_text='Снимите галочку, чтобы скрыть публикацию.',
-    )
+class CreatedAt(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Добавлено',
@@ -20,10 +15,22 @@ class IsPublishedCreatedAbstract(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ('created_at',)
+
+
+class IsPublishedCreatedAt(CreatedAt):
+    is_published = models.BooleanField(
+        default=True,
+        verbose_name='Опубликовано',
+        help_text='Снимите галочку, чтобы скрыть публикацию.',
+    )
+
+    class Meta:
+        abstract = True
         ordering = ('-created_at',)
 
 
-class Category(IsPublishedCreatedAbstract):
+class Category(IsPublishedCreatedAt):
     title = models.CharField(
         max_length=constants.MAX_LENGTH_CHARFIELD,
         verbose_name='Заголовок',
@@ -41,7 +48,7 @@ class Category(IsPublishedCreatedAbstract):
         ),
     )
 
-    class Meta:
+    class Meta(IsPublishedCreatedAt.Meta):
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
@@ -49,13 +56,13 @@ class Category(IsPublishedCreatedAbstract):
         return self.title[:constants.MAX_LENGTH_STR]
 
 
-class Location(IsPublishedCreatedAbstract):
+class Location(IsPublishedCreatedAt):
     name = models.CharField(
         max_length=constants.MAX_LENGTH_CHARFIELD,
         verbose_name='Название места',
     )
 
-    class Meta:
+    class Meta(IsPublishedCreatedAt.Meta):
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
@@ -63,7 +70,7 @@ class Location(IsPublishedCreatedAbstract):
         return self.name[:constants.MAX_LENGTH_STR]
 
 
-class Post(IsPublishedCreatedAbstract):
+class Post(IsPublishedCreatedAt):
     title = models.CharField(
         max_length=constants.MAX_LENGTH_CHARFIELD,
         verbose_name='Заголовок',
@@ -113,7 +120,7 @@ class Post(IsPublishedCreatedAbstract):
         return self.title[:constants.MAX_LENGTH_STR]
 
 
-class Comment(models.Model):
+class Comment(CreatedAt):
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
@@ -128,13 +135,8 @@ class Comment(models.Model):
     text = models.TextField(
         verbose_name='Текст комментария',
     )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата добавления',
-    )
 
-    class Meta:
-        ordering = ('created_at',)
+    class Meta(CreatedAt.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
 
