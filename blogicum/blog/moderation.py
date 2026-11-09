@@ -6,7 +6,7 @@ from transformers import (
     AutoTokenizer,
 )
 
-from .constants import TOXICITY_THRESHOLD
+from core.constants import TOXICITY_THRESHOLD
 
 
 MODEL_NAME = 'cointegrated/rubert-tiny-toxicity'

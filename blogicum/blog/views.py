@@ -200,16 +200,15 @@ def add_comment(request, post_id):
 @login_required
 def edit_comment(request, post_id, comment_id):
     comment = get_object_or_404(
-        Comment.objects.select_related('post'),
+        Comment,
         pk=comment_id,
         post_id=post_id,
     )
-    post = comment.post
 
     if comment.author != request.user:
         return redirect(
             'blog:post_detail',
-            post_id=post.pk,
+            post_id=post_id,
         )
 
     form = CommentForm(
@@ -221,7 +220,7 @@ def edit_comment(request, post_id, comment_id):
         form.save()
         return redirect(
             'blog:post_detail',
-            post_id=post.pk,
+            post_id=post_id,
         )
 
     return render(
@@ -237,23 +236,22 @@ def edit_comment(request, post_id, comment_id):
 @login_required
 def delete_comment(request, post_id, comment_id):
     comment = get_object_or_404(
-        Comment.objects.select_related('post'),
+        Comment,
         pk=comment_id,
         post_id=post_id,
     )
-    post = comment.post
 
     if comment.author != request.user:
         return redirect(
             'blog:post_detail',
-            post_id=post.pk,
+            post_id=post_id,
         )
 
     if request.method == 'POST':
         comment.delete()
         return redirect(
             'blog:post_detail',
-            post_id=post.pk,
+            post_id=post_id,
         )
 
     return render(

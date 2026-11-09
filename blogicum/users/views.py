@@ -7,7 +7,6 @@ from blog.services import (
     filter_published_posts,
     paginate_posts,
 )
-
 from .forms import UserEditForm, UserRegistrationForm
 
 
@@ -36,7 +35,7 @@ def profile(request, username):
 
     post_list = annotate_comments(
         profile.posts.all(),
-    ).order_by('-pub_date')
+    )
 
     if request.user != profile:
         post_list = filter_published_posts(post_list)

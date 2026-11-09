@@ -2,7 +2,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count
 from django.utils import timezone
 
-from . import constants
+from core import constants
 
 
 def annotate_comments(queryset):
@@ -12,7 +12,7 @@ def annotate_comments(queryset):
         'location',
     ).annotate(
         comment_count=Count('comments'),
-    )
+    ).order_by('-pub_date')
 
 
 def filter_published_posts(queryset):
@@ -20,7 +20,7 @@ def filter_published_posts(queryset):
         pub_date__lte=timezone.now(),
         is_published=True,
         category__is_published=True,
-    ).order_by('-pub_date')
+    )
 
 
 def paginate_posts(request, queryset):

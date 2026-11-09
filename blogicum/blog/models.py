@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from . import constants
+from core import constants
 
 
 User = get_user_model()
